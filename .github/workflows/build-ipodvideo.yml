@@ -14,7 +14,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential texinfo automake libtool \
+          sudo apt-get install -y build-essential texinfo automake libtool libtool-bin \
             autoconf flex bison zip perl
 
       # The official Rockbox ARM toolchain (arm-elf-eabi gcc 9.5.0 + Rockbox
