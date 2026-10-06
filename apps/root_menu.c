@@ -73,6 +73,9 @@
 #include "language.h"
 #include "plugin.h"
 #include "disk.h"
+#ifdef HAVE_LCD_COLOR
+#include "gui/home_screen.h"
+#endif
 
 struct root_items {
     int (*function)(void* param);
@@ -495,6 +498,9 @@ static const struct root_items items[] = {
     [GO_TO_PLAYLIST_VIEWER] = { playlist_view, NULL, &playlist_options },
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
+#ifdef HAVE_LCD_COLOR
+    [GO_TO_HOME] =         { home_screen, NULL, NULL },
+#endif
 
 };
 #define NUM_ITEMS (int)(sizeof(items)/sizeof(*items))
@@ -542,6 +548,10 @@ MENUITEM_RETURNVALUE(playlists, ID2P(LANG_PLAYLISTS), GO_TO_PLAYLISTS_SCREEN,
                      NULL, Icon_Playlist);
 MENUITEM_RETURNVALUE(system_menu_, ID2P(LANG_SYSTEM), GO_TO_SYSTEM_SCREEN,
                      NULL, Icon_System_menu);
+#ifdef HAVE_LCD_COLOR
+MENUITEM_RETURNVALUE(home_item, "Home", GO_TO_HOME,
+                     NULL, Icon_Rockbox);
+#endif
 
 struct menu_item_ex root_menu_;
 static struct menu_callback_with_desc root_menu_desc = {
@@ -549,6 +559,9 @@ static struct menu_callback_with_desc root_menu_desc = {
 
 static struct menu_table menu_table[] = {
     /* Order here represents the default ordering */
+#ifdef HAVE_LCD_COLOR
+    { "home", &home_item },
+#endif
     { "bookmarks", &bookmarks },
     { "files", &file_browser },
 #ifdef HAVE_TAGCACHE
@@ -943,6 +956,11 @@ void root_menu(void)
     int previous_browser = global_status.last_browser;
     int selected = 0;
     int shortcut_origin = GO_TO_ROOT;
+#ifdef HAVE_LCD_COLOR
+    /* fork: the home screen is the real root. The stock list is only shown
+       when the home screen itself asks for it (Menu / "Rockbox Menu"). */
+    bool show_stock_root = false;
+#endif
 
     push_current_activity(ACTIVITY_MAINMENU);
     next_screen = root_menu_setup_screens();
@@ -955,6 +973,14 @@ void root_menu(void)
             case MENU_SELECTED_EXIT:
                 /* fall through */
             case GO_TO_ROOT:
+#ifdef HAVE_LCD_COLOR
+                if (!show_stock_root)
+                {
+                    next_screen = GO_TO_HOME;
+                    break;
+                }
+                show_stock_root = false;
+#endif
                 if (last_screen != GO_TO_ROOT)
                     selected = get_selection(last_screen);
                 global_status.last_screen = GO_TO_ROOT; /* We've returned to ROOT */
@@ -1076,6 +1102,14 @@ void root_menu(void)
         } /* switch() */
         continue;
 load_next_screen: /* load_screen is inlined */
+#ifdef HAVE_LCD_COLOR
+        if (next_screen == GO_TO_HOME)
+        {
+            next_screen = load_screen(GO_TO_HOME);
+            show_stock_root = (next_screen == GO_TO_ROOT);
+            continue;
+        }
+#endif
         next_screen = load_screen(next_screen);
     }
 

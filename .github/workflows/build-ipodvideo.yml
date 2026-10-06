@@ -1,0 +1,44 @@
+name: Build iPod Video firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential texinfo automake libtool \
+            autoconf flex bison zip perl
+
+      # The official Rockbox ARM toolchain (arm-elf-eabi gcc 9.5.0 + Rockbox
+      # patches). Building it takes ~20-30 min the first time, then it's cached.
+      - name: Cache Rockbox ARM toolchain
+        id: toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/rbdev
+          key: rbdev-arm-${{ runner.os }}-${{ hashFiles('tools/rockboxdev.sh', 'tools/toolchain-patches/**') }}
+
+      - name: Build Rockbox ARM toolchain
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        run: tools/rockboxdev.sh --target=a --prefix="$HOME/rbdev" --makeflags=-j"$(nproc)"
+
+      - name: Build rockbox.zip for ipodvideo
+        run: |
+          export PATH="$HOME/rbdev/bin:$PATH"
+          mkdir build && cd build
+          ../tools/configure --target=ipodvideo --ram=64 --type=n
+          make -j"$(nproc)"
+          make zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rockbox-ipodvideo-${{ github.sha }}
+          path: build/rockbox.zip

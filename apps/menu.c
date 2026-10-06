@@ -641,6 +641,14 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                 ret = GO_TO_PREVIOUS;
                 done = true;
             }
+#ifdef HAVE_LCD_COLOR
+            else
+            {
+                /* fork: backing out of the stock root returns to Home */
+                ret = GO_TO_HOME;
+                done = true;
+            }
+#endif
         }
         else if (action == ACTION_STD_OK)
         {
